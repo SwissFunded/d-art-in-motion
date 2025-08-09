@@ -33,6 +33,8 @@ export default function Home() {
       return false;
     }
   });
+  const [artistOptions, setArtistOptions] = useState<string[]>([]);
+  const [locationOptions, setLocationOptions] = useState<string[]>([]);
 
   const columns = useMemo(() => {
     const base = [
@@ -104,6 +106,64 @@ export default function Home() {
     load();
     return () => { isMounted = false; };
   }, [page, pageSize, sort]);
+
+  // Load dropdown options (distinct-ish) for artist and location columns
+  useEffect(() => {
+    let isMounted = true;
+    async function loadOptions() {
+      if (!supabase) return;
+      try {
+        const source = config.schema && config.schema !== "public"
+          ? supabase.schema(config.schema).from(config.table)
+          : supabase.from(config.table);
+
+        // Determine best-matching column names
+        const artistKey = ["artist_name", "artist"].find((k) => columns.includes(k));
+        const locationKey = ["location", "location_normalized", "location_raw", "location_to", "location_from"].find((k) => columns.includes(k));
+
+        const MAX = 10000;
+        if (artistKey) {
+          const { data } = await source
+            .select(`${artistKey}`)
+            .not(artistKey, 'is', null)
+            .order(artistKey, { ascending: true })
+            .range(0, MAX - 1);
+          if (isMounted) {
+            const set = new Set<string>();
+            (data || []).forEach((r: any) => {
+              const v = String(r[artistKey] ?? "").trim();
+              if (v) set.add(v);
+            });
+            setArtistOptions(Array.from(set));
+          }
+        } else {
+          if (isMounted) setArtistOptions([]);
+        }
+
+        if (locationKey) {
+          const { data } = await source
+            .select(`${locationKey}`)
+            .not(locationKey, 'is', null)
+            .order(locationKey, { ascending: true })
+            .range(0, MAX - 1);
+          if (isMounted) {
+            const set = new Set<string>();
+            (data || []).forEach((r: any) => {
+              const v = String(r[locationKey] ?? "").trim();
+              if (v) set.add(v);
+            });
+            setLocationOptions(Array.from(set));
+          }
+        } else {
+          if (isMounted) setLocationOptions([]);
+        }
+      } catch {
+        // Fail silently for options; main data still loads
+      }
+    }
+    loadOptions();
+    return () => { isMounted = false; };
+  }, [columns]);
   function toggleSort(column: string) {
     setPage(1);
     setSort((prev) => {
@@ -181,18 +241,22 @@ export default function Home() {
             value={search}
             onChange={(e) => { setPage(1); setSearch(e.target.value); }}
           />
-          <input
-            className="input"
-            placeholder="Filter artist..."
-            value={filterArtist}
-            onChange={(e) => { setPage(1); setFilterArtist(e.target.value); }}
-          />
-          <input
-            className="input"
-            placeholder="Filter location..."
-            value={filterLocation}
-            onChange={(e) => { setPage(1); setFilterLocation(e.target.value); }}
-          />
+          {artistOptions.length > 0 && (
+            <select className="select" value={filterArtist} onChange={(e) => { setPage(1); setFilterArtist(e.target.value); }}>
+              <option value="">All artists</option>
+              {artistOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          )}
+          {locationOptions.length > 0 && (
+            <select className="select" value={filterLocation} onChange={(e) => { setPage(1); setFilterLocation(e.target.value); }}>
+              <option value="">All locations</option>
+              {locationOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          )}
           <button className="btn" onClick={() => { setSearch(""); setFilterArtist(""); setFilterLocation(""); setPage(1); }}>Clear</button>
           <button className="btn" onClick={() => setShowColumnsPanel((s) => !s)}>Columns</button>
         </div>
