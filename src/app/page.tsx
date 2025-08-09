@@ -235,6 +235,7 @@ export default function Home() {
   const [movesView, setMovesView] = useState<'pending' | 'completed'>('pending');
   const [confirming, setConfirming] = useState<Move | null>(null);
   const [animatingDoneId, setAnimatingDoneId] = useState<string | null>(null);
+  const [confetti, setConfetti] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -437,6 +438,7 @@ export default function Home() {
       <section className="wrap" style={{ paddingTop: 0 }}>
         <h2 className="title" style={{ fontSize: 18, marginTop: 8 }}>Recent Location Changes</h2>
         <div className="segmented" role="tablist" aria-label="Changes view">
+          <div className="seg-indicator" style={{ transform: movesView === 'pending' ? 'translateX(0%)' : 'translateX(100%)' }} />
           <button
             className={`seg-btn ${movesView === 'pending' ? 'is-active' : ''}`}
             role="tab"
@@ -547,15 +549,24 @@ for each row execute function public.log_artwork_location_change();`}
               <button className="btn btn--small" onClick={() => setConfirming(null)}>Cancel</button>
               <button className="btn btn--primary btn--small" onClick={async () => {
                 const id = confirming.id; setConfirming(null); setAnimatingDoneId(id);
+                setConfetti(true);
                 setTimeout(async () => {
                   if (!supabase) return;
                   await supabase.from('artwork_location_changes').update({ completed: true }).eq('id', id);
                   setMoves((prev) => prev.filter((x) => x.id !== id));
                   setAnimatingDoneId(null);
+                  setTimeout(() => setConfetti(false), 900);
                 }, 420);
               }}>Mark Done</button>
             </div>
           </div>
+        </div>
+      )}
+      {confetti && (
+        <div className="confetti" aria-hidden="true">
+          {Array.from({ length: 16 }).map((_, i) => (
+            <i key={i} />
+          ))}
         </div>
       )}
     </div>
