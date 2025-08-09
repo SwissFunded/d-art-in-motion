@@ -34,6 +34,8 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 .table td{padding:12px 10px;border-bottom:1px solid var(--border);font-size:14px}
 .table tr{transition:background .2s ease}
 .table tr:hover{background:var(--hover)}
+.row-done{animation:rowDone 0.42s ease forwards}
+@keyframes rowDone{0%{transform:scale(1);background:var(--panel)}60%{transform:scale(0.98);background:#e8f3ff}100%{transform:scale(1);background:transparent;opacity:0}}
 .th-sort{cursor:pointer}
 .sort-indicator{color:var(--muted);margin-left:4px}
 .skeleton-row .skeleton{display:inline-block;height:12px;width:100%;max-width:160px;background:linear-gradient(90deg,#f3f4f6, #e5e7eb, #f3f4f6);background-size:200% 100%;border-radius:6px;animation:shimmer 1.2s infinite}
@@ -51,6 +53,14 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 .drawer-body{padding:12px;overflow:auto}
 .drawer .table{border-radius:8px}
 .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.12);backdrop-filter:blur(2px);z-index:30}
+.confirm-backdrop{position:fixed;inset:0;background:rgba(15,18,30,0.25);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:60;animation:fadeIn .2s ease}
+.confirm-modal{width:min(520px,90vw);background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;animation:popIn .2s ease}
+.confirm-title{font-weight:700;margin-bottom:8px}
+.confirm-body{display:grid;grid-template-columns:1fr 2fr;gap:8px 12px;margin-bottom:12px}
+.confirm-row span{color:var(--muted)}
+.confirm-actions{display:flex;gap:8px;justify-content:flex-end}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:900px){.table th,.table td{padding:10px 8px}}
 
 

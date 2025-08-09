@@ -233,6 +233,8 @@ export default function Home() {
   const [movesPageSize, setMovesPageSize] = useState<number>(10);
   const [movesCount, setMovesCount] = useState<number>(0);
   const [movesView, setMovesView] = useState<'pending' | 'completed'>('pending');
+  const [confirming, setConfirming] = useState<Move | null>(null);
+  const [animatingDoneId, setAnimatingDoneId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -502,7 +504,7 @@ for each row execute function public.log_artwork_location_change();`}
               </thead>
               <tbody>
                 {moves.map((m) => (
-                  <tr key={m.id}>
+                  <tr key={m.id} className={animatingDoneId === m.id ? 'row row-done' : ''}>
                     <td>{m.changed_at ? new Date(String(m.changed_at)).toLocaleString() : ''}</td>
                     <td>{m.nummer ?? ''}</td>
                     <td>{m.artist_name ?? ''}</td>
@@ -511,15 +513,7 @@ for each row execute function public.log_artwork_location_change();`}
                     <td>{m.completed ? 'Done' : 'Pending'}</td>
                     <td style={{ textAlign: 'right' }}>
                       {!m.completed && (
-                        <button className="btn btn--primary btn--small" onClick={async () => {
-                          if (!supabase) return;
-                          await supabase
-                            .from('artwork_location_changes')
-                            .update({ completed: true })
-                            .eq('id', m.id);
-                          // Optimistic update will be replaced by realtime UPDATE
-                          setMoves((prev) => prev.filter((x) => x.id !== m.id));
-                        }}>Done</button>
+                        <button className="btn btn--primary btn--small" onClick={(e) => { e.stopPropagation(); setConfirming(m); }}>Done</button>
                       )}
                     </td>
                   </tr>
@@ -539,6 +533,31 @@ for each row execute function public.log_artwork_location_change();`}
           </select>
         </div>
       </section>
+      {confirming && (
+        <div className="confirm-backdrop" onClick={() => setConfirming(null)}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+            <div className="confirm-title" id="confirm-title">Mark change as Done?</div>
+            <div className="confirm-body">
+              <div className="confirm-row"><span>Nummer</span><strong>{confirming.nummer ?? ''}</strong></div>
+              <div className="confirm-row"><span>Artist</span><strong>{confirming.artist_name ?? ''}</strong></div>
+              <div className="confirm-row"><span>From</span><strong title={confirming.old_location || ''}>{confirming.old_location ?? ''}</strong></div>
+              <div className="confirm-row"><span>To</span><strong title={confirming.new_location || ''}>{confirming.new_location ?? ''}</strong></div>
+            </div>
+            <div className="confirm-actions">
+              <button className="btn btn--small" onClick={() => setConfirming(null)}>Cancel</button>
+              <button className="btn btn--primary btn--small" onClick={async () => {
+                const id = confirming.id; setConfirming(null); setAnimatingDoneId(id);
+                setTimeout(async () => {
+                  if (!supabase) return;
+                  await supabase.from('artwork_location_changes').update({ completed: true }).eq('id', id);
+                  setMoves((prev) => prev.filter((x) => x.id !== id));
+                  setAnimatingDoneId(null);
+                }, 420);
+              }}>Mark Done</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
