@@ -42,6 +42,9 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 .skeleton-row .skeleton{display:inline-block;height:12px;width:100%;max-width:160px;background:linear-gradient(90deg,#f3f4f6, #e5e7eb, #f3f4f6);background-size:200% 100%;border-radius:6px;animation:shimmer 1.2s infinite}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .empty{padding:16px;color:var(--muted)}
+.empty-card{border:1px dashed var(--border);border-radius:14px;padding:18px;background:linear-gradient(180deg,#fafbfd,#ffffff);text-align:center;color:var(--muted)}
+.empty-title{font-weight:700;color:var(--text);margin-bottom:4px}
+.empty-sub{font-size:13px}
 .select{padding:8px 10px;border:1px solid var(--border);border-radius:8px}
 .pagination{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 .path{color:var(--muted)}

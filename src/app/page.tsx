@@ -458,37 +458,9 @@ export default function Home() {
           <div className="count">{movesCount ? `${movesCount} ${movesView}` : ""}</div>
         </div>
         {(!movesError && moves.length === 0 && !movesLoading) ? (
-          <div className="columns-panel" style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 14, color: 'var(--muted)' }}>To enable tracking, run this in Supabase SQL Editor:</div>
-            <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>
-{`-- Location change audit table (adds 'completed' flag)
-create table if not exists public.artwork_location_changes (
-  id uuid primary key default gen_random_uuid(),
-  artwork_id uuid not null,
-  nummer int,
-  artist_name text,
-  old_location text,
-  new_location text,
-  changed_at timestamptz not null default now(),
-  completed boolean not null default false
-);
-
--- Trigger function to log changes when location_normalized is updated
-create or replace function public.log_artwork_location_change() returns trigger language plpgsql as $$
-begin
-  if coalesce(new.location_normalized, '') is distinct from coalesce(old.location_normalized, '') then
-    insert into public.artwork_location_changes (artwork_id, nummer, artist_name, old_location, new_location, changed_at)
-    values (new.id, new.nummer, new.artist_name, old.location_normalized, new.location_normalized, now());
-  end if;
-  return new;
-end;$$;
-
--- Attach trigger to your table (note the quotes for the space in the name)
-drop trigger if exists trg_log_location_change on public."Data Artworks";
-create trigger trg_log_location_change
-after update of location_normalized on public."Data Artworks"
-for each row execute function public.log_artwork_location_change();`}
-            </pre>
+          <div className="empty-card">
+            <div className="empty-title">No {movesView} changes</div>
+            <div className="empty-sub">When artwork locations are updated, changes will appear here.</div>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
