@@ -47,6 +47,28 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 .empty-card{border:1px dashed var(--border);border-radius:14px;padding:18px;background:linear-gradient(180deg,#fafbfd,#ffffff);text-align:center;color:var(--muted)}
 .empty-title{font-weight:700;color:var(--text);margin-bottom:4px}
 .empty-sub{font-size:13px}
+.change-list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.change-card{display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:14px;background:var(--panel);padding:12px;transition:transform .18s ease, background .18s ease, border-color .18s ease}
+.change-card:hover{transform:translateY(-1px);border-color:#d7dce6;background:linear-gradient(180deg,#fafbfd,#ffffff)}
+.change-card .left .title-line{font-weight:700}
+.change-card .left .sub-line{color:var(--muted);font-size:13px}
+.change-card .mid{display:flex;gap:8px;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+.chip{padding:6px 8px;border-radius:999px;border:1px solid var(--border);background:#f6f7fb;font-size:12px}
+.chip--accent{border-color:#d3e6ff;background:#eaf2ff}
+.arrow{color:var(--muted)}
+.change-card .right{text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.change-card .time{color:var(--muted);font-size:12px}
+.skeleton-card{border-style:dashed}
+.sk{display:inline-block;border-radius:6px;background:linear-gradient(90deg,#f3f4f6,#e5e7eb,#f3f4f6);background-size:200% 100%;animation:shimmer 1.2s infinite}
+.sk-lg{width:72px;height:14px}
+.sk-sm{width:120px;height:12px}
+.card-done{animation:cardDone .42s ease forwards}
+.card-undo{animation:cardUndo .42s ease forwards}
+@keyframes cardDone{0%{transform:scale(1);background:#eaf5ff}100%{transform:scale(1);background:transparent;opacity:0}}
+@keyframes cardUndo{0%{transform:scale(1);background:#fff7ea}100%{transform:scale(1);background:transparent;opacity:0}}
+.toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;flex-direction:column;z-index:80}
+.toast{background:#111827;color:#fff;padding:10px 12px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);animation:toastIn .2s ease}
+@keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .select{padding:8px 10px;border:1px solid var(--border);border-radius:8px}
 .pagination{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 .path{color:var(--muted)}

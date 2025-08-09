@@ -238,6 +238,12 @@ export default function Home() {
   const [animatingId, setAnimatingId] = useState<string | null>(null);
   const [animatingMode, setAnimatingMode] = useState<'done' | 'undo' | null>(null);
   const [confetti, setConfetti] = useState<boolean>(false);
+  const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
+  const showToast = (text: string) => {
+    const id = Date.now();
+    setToasts((t) => [...t, { id, text }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2400);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -465,39 +471,38 @@ export default function Home() {
             <div className="empty-sub">When artwork locations are updated, changes will appear here.</div>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Changed</th>
-                  <th>Nummer</th>
-                  <th>Artist</th>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {moves.map((m) => (
-                  <tr key={m.id} className={animatingId === m.id ? (animatingMode === 'done' ? 'row row-done' : 'row row-undo') : ''}>
-                    <td>{m.changed_at ? new Date(String(m.changed_at)).toLocaleString() : ''}</td>
-                    <td>{m.nummer ?? ''}</td>
-                    <td>{m.artist_name ?? ''}</td>
-                    <td title={m.old_location || ''}>{m.old_location ?? ''}</td>
-                    <td title={m.new_location || ''}>{m.new_location ?? ''}</td>
-                    <td>{m.completed ? 'Done' : 'Pending'}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {!m.completed ? (
-                        <button className="btn btn--primary btn--small" onClick={(e) => { e.stopPropagation(); setConfirming(m); setConfirmMode('done'); }}>Done</button>
-                      ) : (
-                        <button className="btn btn--small" onClick={(e) => { e.stopPropagation(); setConfirming(m); setConfirmMode('undo'); }}>Undo</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="change-list">
+            {movesLoading ? (
+              Array.from({ length: Math.min(movesPageSize, 6) }).map((_, i) => (
+                <div key={`skc-${i}`} className="change-card skeleton-card">
+                  <div className="left"><div className="sk sk-lg" /></div>
+                  <div className="mid"><div className="sk sk-sm" /><div className="sk sk-sm" /></div>
+                  <div className="right"><div className="sk sk-sm" /></div>
+                </div>
+              ))
+            ) : (
+              moves.map((m) => (
+                <div key={m.id} className={`change-card ${animatingId === m.id ? (animatingMode === 'done' ? 'card-done' : 'card-undo') : ''}`}>
+                  <div className="left">
+                    <div className="title-line">#{m.nummer ?? ''}</div>
+                    <div className="sub-line">{m.artist_name ?? ''}</div>
+                  </div>
+                  <div className="mid">
+                    <span className="chip" title={String(m.old_location ?? '')}>{m.old_location ?? ''}</span>
+                    <span className="arrow" aria-hidden>→</span>
+                    <span className="chip chip--accent" title={String(m.new_location ?? '')}>{m.new_location ?? ''}</span>
+                  </div>
+                  <div className="right">
+                    <div className="time">{m.changed_at ? new Date(String(m.changed_at)).toLocaleString() : ''}</div>
+                    {!m.completed ? (
+                      <button className="btn btn--primary btn--small" onClick={(e) => { e.stopPropagation(); setConfirming(m); setConfirmMode('done'); }}>Done</button>
+                    ) : (
+                      <button className="btn btn--small" onClick={(e) => { e.stopPropagation(); setConfirming(m); setConfirmMode('undo'); }}>Undo</button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
         <div className="pagination">
@@ -531,7 +536,7 @@ export default function Home() {
                   await supabase.from('artwork_location_changes').update({ completed: confirmMode === 'done' }).eq('id', id);
                   setMoves((prev) => prev.filter((x) => x.id !== id));
                   setAnimatingId(null); setAnimatingMode(null);
-                  if (confirmMode === 'done') setTimeout(() => setConfetti(false), 900);
+                  if (confirmMode === 'done') { setTimeout(() => setConfetti(false), 900); showToast('Marked as done'); } else { showToast('Reverted to pending'); }
                 }, 420);
               }}>{confirmMode === 'done' ? 'Mark Done' : 'Undo'}</button>
             </div>
@@ -542,6 +547,13 @@ export default function Home() {
         <div className="confetti" aria-hidden="true">
           {Array.from({ length: 16 }).map((_, i) => (
             <i key={i} />
+          ))}
+        </div>
+      )}
+      {toasts.length > 0 && (
+        <div className="toast-wrap" aria-live="polite" aria-atomic="true">
+          {toasts.map((t) => (
+            <div className="toast" key={t.id}>{t.text}</div>
           ))}
         </div>
       )}
