@@ -225,7 +225,7 @@ export default function Home() {
   const closeDrawer = () => setSelected(null);
 
   // Recent location changes section
-  type Move = { id: string; artwork_id: string; nummer?: number; artist_name?: string; old_location?: string; new_location?: string; changed_at?: string; acknowledged_at?: string | null };
+  type Move = { id: string; artwork_id: string; nummer?: number; artist_name?: string; old_location?: string; new_location?: string; changed_at?: string; completed?: boolean | null };
   const [moves, setMoves] = useState<Move[]>([]);
   const [movesLoading, setMovesLoading] = useState<boolean>(false);
   const [movesError, setMovesError] = useState<string>("");
@@ -245,7 +245,7 @@ export default function Home() {
           : supabase.from("artwork_location_changes");
         const offset = (movesPage - 1) * movesPageSize;
         const { data, error, count, status } = await source
-          .select("id, artwork_id, nummer, artist_name, old_location, new_location, changed_at, acknowledged_at", { count: "exact" })
+          .select("id, artwork_id, nummer, artist_name, old_location, new_location, changed_at, completed", { count: "exact" })
           .order("changed_at", { ascending: false })
           .range(offset, offset + movesPageSize - 1);
         if (error) throw Object.assign(error, { status });
@@ -276,7 +276,8 @@ export default function Home() {
         setMovesCount((c) => c + 1);
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "artwork_location_changes" }, (payload: any) => {
-        setMoves((prev) => prev.map((m) => m.id === payload.new.id ? (payload.new as Move) : m));
+        const updated = payload.new as Move;
+        setMoves((prev) => prev.filter((m) => m.id !== updated.id || !updated.completed));
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -440,7 +441,7 @@ export default function Home() {
           <div className="columns-panel" style={{ marginTop: 8 }}>
             <div style={{ fontSize: 14, color: 'var(--muted)' }}>To enable tracking, run this in Supabase SQL Editor:</div>
             <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>
-{`-- Location change audit table
+{`-- Location change audit table (adds 'completed' flag)
 create table if not exists public.artwork_location_changes (
   id uuid primary key default gen_random_uuid(),
   artwork_id uuid not null,
@@ -449,15 +450,15 @@ create table if not exists public.artwork_location_changes (
   old_location text,
   new_location text,
   changed_at timestamptz not null default now(),
-  acknowledged_at timestamptz
+  completed boolean not null default false
 );
 
--- Trigger function to log changes when location is updated
+-- Trigger function to log changes when location_normalized is updated
 create or replace function public.log_artwork_location_change() returns trigger language plpgsql as $$
 begin
-  if coalesce(new.location, '') is distinct from coalesce(old.location, '') then
+  if coalesce(new.location_normalized, '') is distinct from coalesce(old.location_normalized, '') then
     insert into public.artwork_location_changes (artwork_id, nummer, artist_name, old_location, new_location, changed_at)
-    values (new.id, new.nummer, new.artist_name, old.location, new.location, now());
+    values (new.id, new.nummer, new.artist_name, old.location_normalized, new.location_normalized, now());
   end if;
   return new;
 end;$$;
@@ -465,7 +466,7 @@ end;$$;
 -- Attach trigger to your table (note the quotes for the space in the name)
 drop trigger if exists trg_log_location_change on public."Data Artworks";
 create trigger trg_log_location_change
-after update of location on public."Data Artworks"
+after update of location_normalized on public."Data Artworks"
 for each row execute function public.log_artwork_location_change();`}
             </pre>
           </div>
@@ -491,17 +492,17 @@ for each row execute function public.log_artwork_location_change();`}
                     <td>{m.artist_name ?? ''}</td>
                     <td title={m.old_location || ''}>{m.old_location ?? ''}</td>
                     <td title={m.new_location || ''}>{m.new_location ?? ''}</td>
-                    <td>{m.acknowledged_at ? 'Done' : 'Pending'}</td>
+                    <td>{m.completed ? 'Done' : 'Pending'}</td>
                     <td>
-                      {!m.acknowledged_at && (
+                      {!m.completed && (
                         <button className="btn btn--small" onClick={async () => {
                           if (!supabase) return;
                           await supabase
                             .from('artwork_location_changes')
-                            .update({ acknowledged_at: new Date().toISOString() })
+                            .update({ completed: true })
                             .eq('id', m.id);
                           // Optimistic update will be replaced by realtime UPDATE
-                          setMoves((prev) => prev.map((x) => x.id === m.id ? { ...x, acknowledged_at: new Date().toISOString() } : x));
+                          setMoves((prev) => prev.filter((x) => x.id !== m.id));
                         }}>Acknowledge</button>
                       )}
                     </td>
