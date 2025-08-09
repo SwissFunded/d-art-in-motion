@@ -16,9 +16,13 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Robot
 .error{color:var(--danger);white-space:pre-line}
 .count{margin-left:auto;color:var(--muted)}
 .table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.table th{position:sticky;top:0;background:#fafafa;border-bottom:1px solid var(--border);text-align:left;padding:12px 10px;color:var(--muted);font-size:13px}
+.table th{position:sticky;top:0;background:#fafafa;border-bottom:1px solid var(--border);text-align:left;padding:12px 10px;color:var(--muted);font-size:13px;user-select:none}
 .table td{padding:12px 10px;border-bottom:1px solid var(--border);font-size:14px}
 .table tr:hover{background:var(--hover)}
+.th-sort{cursor:pointer}
+.sort-indicator{color:var(--muted);margin-left:4px}
+.skeleton-row .skeleton{display:inline-block;height:12px;width:100%;max-width:160px;background:linear-gradient(90deg,#f3f4f6, #e5e7eb, #f3f4f6);background-size:200% 100%;border-radius:6px;animation:shimmer 1.2s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .empty{padding:16px;color:var(--muted)}
 .select{padding:8px 10px;border:1px solid var(--border);border-radius:8px}
 .pagination{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}

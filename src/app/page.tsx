@@ -12,6 +12,7 @@ export default function Home() {
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(25);
   const [count, setCount] = useState<number>(0);
+  const [sort, setSort] = useState<{ key: string | null; dir: "asc" | "desc" }>({ key: null, dir: "asc" });
 
   const columns = useMemo(() => {
     const base = [
@@ -47,6 +48,9 @@ export default function Home() {
 
         const offset = (page - 1) * pageSize;
         let q = source.select("*", { count: "exact" }).range(offset, offset + pageSize - 1);
+        if (sort.key) {
+          q = q.order(sort.key, { ascending: sort.dir === "asc" });
+        }
         const { data, error: err, count: c } = await q;
         if (err) throw err;
         if (!isMounted) return;
@@ -66,7 +70,20 @@ export default function Home() {
     }
     load();
     return () => { isMounted = false; };
-  }, [page, pageSize]);
+  }, [page, pageSize, sort]);
+  function toggleSort(column: string) {
+    setPage(1);
+    setSort((prev) => {
+      if (prev.key !== column) return { key: column, dir: "asc" };
+      if (prev.dir === "asc") return { key: column, dir: "desc" };
+      return { key: null, dir: "asc" };
+    });
+  }
+
+  function sortIndicator(column: string) {
+    if (sort.key !== column) return "";
+    return sort.dir === "asc" ? " ▲" : " ▼";
+  }
 
   const filtered = useMemo(() => {
     if (!search) return rows;
@@ -111,12 +128,23 @@ export default function Home() {
             <thead>
               <tr>
                 {columns.map((c) => (
-                  <th key={c}>{c}</th>
+                  <th key={c} className="th-sort" onClick={() => toggleSort(c)} title="Click to sort">
+                    {c}
+                    <span className="sort-indicator">{sortIndicator(c)}</span>
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                Array.from({ length: Math.min(pageSize, 10) }).map((_, i) => (
+                  <tr key={`sk-${i}`} className="skeleton-row">
+                    {columns.map((c) => (
+                      <td key={`${c}-${i}`}><span className="skeleton" /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : filtered.length === 0 ? (
                 <tr><td className="empty" colSpan={columns.length}>No records</td></tr>
               ) : (
                 filtered.map((r, idx) => (
