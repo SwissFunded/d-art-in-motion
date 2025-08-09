@@ -13,6 +13,26 @@ export default function Home() {
   const [pageSize, setPageSize] = useState<number>(25);
   const [count, setCount] = useState<number>(0);
   const [sort, setSort] = useState<{ key: string | null; dir: "asc" | "desc" }>({ key: null, dir: "asc" });
+  const [filterArtist, setFilterArtist] = useState<string>("");
+  const [filterLocation, setFilterLocation] = useState<string>("");
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("daim_hidden_columns");
+      if (!raw) return new Set<string>();
+      const arr = JSON.parse(raw) as string[];
+      return new Set(arr);
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [showColumnsPanel, setShowColumnsPanel] = useState<boolean>(false);
+  const [hideEmptyColumns, setHideEmptyColumns] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("daim_hide_empty_columns") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const columns = useMemo(() => {
     const base = [
@@ -31,6 +51,19 @@ export default function Home() {
     for (const k of keys) if (!ordered.includes(k)) ordered.push(k);
     return ordered.length ? ordered : base;
   }, [rows]);
+
+  // Sync hidden columns persistence when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("daim_hidden_columns", JSON.stringify(Array.from(hiddenColumns)));
+    } catch {}
+  }, [hiddenColumns]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("daim_hide_empty_columns", hideEmptyColumns ? "1" : "0");
+    } catch {}
+  }, [hideEmptyColumns]);
 
   useEffect(() => {
     let isMounted = true;
@@ -86,16 +119,50 @@ export default function Home() {
   }
 
   const filtered = useMemo(() => {
-    if (!search) return rows;
-    const s = search.toLowerCase();
-    return rows.filter((r) =>
-      columns.some((c) => {
-        const v = r[c as keyof typeof r];
-        if (v == null) return false;
-        return String(v).toLowerCase().includes(s);
-      })
-    );
-  }, [rows, search, columns]);
+    let out = rows;
+    // Global search across all columns
+    if (search) {
+      const s = search.toLowerCase();
+      out = out.filter((r) =>
+        columns.some((c) => {
+          const v = r[c as keyof typeof r];
+          if (v == null) return false;
+          return String(v).toLowerCase().includes(s);
+        })
+      );
+    }
+    // Quick filters
+    if (filterArtist) {
+      const key = columns.includes("artist_name") ? "artist_name" : (columns.includes("artist") ? "artist" : null);
+      if (key) {
+        const s = filterArtist.toLowerCase();
+        out = out.filter((r) => String(r[key as keyof typeof r] ?? "").toLowerCase().includes(s));
+      }
+    }
+    if (filterLocation) {
+      const locKey = ["location", "location_normalized", "location_raw", "location_to", "location_from"].find((k) => columns.includes(k));
+      if (locKey) {
+        const s = filterLocation.toLowerCase();
+        out = out.filter((r) => String(r[locKey as keyof typeof r] ?? "").toLowerCase().includes(s));
+      }
+    }
+    return out;
+  }, [rows, search, filterArtist, filterLocation, columns]);
+
+  // Columns to display (visibility + optionally hide empty)
+  const displayColumns = useMemo(() => {
+    const base = columns.filter((c) => !hiddenColumns.has(c));
+    if (!hideEmptyColumns || filtered.length === 0) return base;
+    const nonEmpty = base.filter((c) => filtered.some((r) => {
+      const v = r[c as keyof typeof r];
+      return v != null && String(v).trim() !== "";
+    }));
+    return nonEmpty.length ? nonEmpty : base;
+  }, [columns, hiddenColumns, hideEmptyColumns, filtered]);
+
+  // Row details drawer
+  const [selected, setSelected] = useState<Row | null>(null);
+  const closeDrawer = () => setSelected(null);
 
   return (
     <div>
@@ -114,8 +181,48 @@ export default function Home() {
             value={search}
             onChange={(e) => { setPage(1); setSearch(e.target.value); }}
           />
-          <button className="btn" onClick={() => { setSearch(""); setPage(1); }}>Reset</button>
+          <input
+            className="input"
+            placeholder="Filter artist..."
+            value={filterArtist}
+            onChange={(e) => { setPage(1); setFilterArtist(e.target.value); }}
+          />
+          <input
+            className="input"
+            placeholder="Filter location..."
+            value={filterLocation}
+            onChange={(e) => { setPage(1); setFilterLocation(e.target.value); }}
+          />
+          <button className="btn" onClick={() => { setSearch(""); setFilterArtist(""); setFilterLocation(""); setPage(1); }}>Clear</button>
+          <button className="btn" onClick={() => setShowColumnsPanel((s) => !s)}>Columns</button>
         </div>
+
+        {showColumnsPanel && (
+          <div className="columns-panel">
+            <div className="columns-grid">
+              {columns.map((c) => (
+                <label key={c} className="col-item">
+                  <input
+                    type="checkbox"
+                    checked={!hiddenColumns.has(c)}
+                    onChange={(e) => {
+                      setHiddenColumns((prev) => {
+                        const next = new Set(Array.from(prev));
+                        if (e.target.checked) next.delete(c); else next.add(c);
+                        return next;
+                      });
+                    }}
+                  />
+                  <span>{c}</span>
+                </label>
+              ))}
+            </div>
+            <label className="col-item" style={{ marginTop: 8 }}>
+              <input type="checkbox" checked={hideEmptyColumns} onChange={(e) => setHideEmptyColumns(e.target.checked)} />
+              <span>Hide empty columns</span>
+            </label>
+          </div>
+        )}
 
         <div className="status">
           {loading ? <span>Loading…</span> : null}
@@ -127,7 +234,7 @@ export default function Home() {
           <table className="table">
             <thead>
               <tr>
-                {columns.map((c) => (
+                {displayColumns.map((c) => (
                   <th key={c} className="th-sort" onClick={() => toggleSort(c)} title="Click to sort">
                     {c}
                     <span className="sort-indicator">{sortIndicator(c)}</span>
@@ -139,17 +246,17 @@ export default function Home() {
               {loading ? (
                 Array.from({ length: Math.min(pageSize, 10) }).map((_, i) => (
                   <tr key={`sk-${i}`} className="skeleton-row">
-                    {columns.map((c) => (
+                    {displayColumns.map((c) => (
                       <td key={`${c}-${i}`}><span className="skeleton" /></td>
                     ))}
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
-                <tr><td className="empty" colSpan={columns.length}>No records</td></tr>
+                <tr><td className="empty" colSpan={displayColumns.length}>No records</td></tr>
               ) : (
                 filtered.map((r, idx) => (
-                  <tr key={idx}>
-                    {columns.map((c) => {
+                  <tr key={idx} className="row" onClick={() => setSelected(r)}>
+                    {displayColumns.map((c) => {
                       const v = r[c as keyof typeof r];
                       const text = c === 'created_at' && v ? new Date(String(v)).toLocaleString() : String(v ?? '');
                       return <td key={c} title={text}>{text}</td>;
@@ -172,6 +279,33 @@ export default function Home() {
             <option value={100}>100</option>
           </select>
         </div>
+        {selected && (
+          <>
+            <div className="drawer-backdrop" onClick={closeDrawer} />
+            <aside className="drawer">
+              <div className="drawer-header">
+                <strong>Details</strong>
+                <button className="btn" onClick={closeDrawer} aria-label="Close">Close</button>
+              </div>
+              <div className="drawer-body">
+                <table className="table">
+                  <tbody>
+                    {Object.keys(selected).map((k) => {
+                      const v = selected[k];
+                      const text = k === 'created_at' && v ? new Date(String(v)).toLocaleString() : String(v ?? '');
+                      return (
+                        <tr key={k}>
+                          <th style={{ width: 180 }}>{k}</th>
+                          <td title={text}>{text}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </aside>
+          </>
+        )}
       </main>
     </div>
   );
