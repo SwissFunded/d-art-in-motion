@@ -245,6 +245,8 @@ export default function Home() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2400);
   };
   const [dense, setDense] = useState<boolean>(false);
+  const [stuck, setStuck] = useState<boolean>(false);
+  const [showFab, setShowFab] = useState<boolean>(false);
   useEffect(() => {
     try { setDense(localStorage.getItem('daim_dense') === '1'); } catch {}
   }, []);
@@ -252,6 +254,17 @@ export default function Home() {
     try { localStorage.setItem('daim_dense', dense ? '1' : '0'); } catch {}
   }, [dense]);
   const toggleDense = () => setDense((v) => !v);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY || document.documentElement.scrollTop;
+      setStuck(y > 40);
+      setShowFab(y > 300);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -314,7 +327,7 @@ export default function Home() {
       </header>
 
       <main className="wrap">
-        <div className="controls">
+        <div className={`controls toolbar ${stuck ? 'is-stuck' : ''}`}>
           <input
             className="input"
             placeholder="Search by any column..."
@@ -382,7 +395,7 @@ export default function Home() {
                 {displayColumns.map((c) => (
                   <th key={c} className="th-sort" onClick={() => toggleSort(c)} title="Click to sort">
                     {c}
-                    <span className="sort-indicator">{sortIndicator(c)}</span>
+                    <span className={`sort-indicator ${sort.key === c ? 'is-active' : 'is-neutral'}`}>{sort.key === c ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
                   </th>
                 ))}
               </tr>
@@ -592,6 +605,9 @@ export default function Home() {
             <div className="toast" key={t.id}>{t.text}</div>
           ))}
         </div>
+      )}
+      {showFab && (
+        <button className="fab" aria-label="Jump to top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>↑</button>
       )}
     </div>
   );

@@ -11,6 +11,8 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 .title{margin:0;font-size:22px;font-weight:700}
 .subtitle{margin-top:0;color:var(--muted);font-size:13px}
 .controls{display:flex;gap:10px;align-items:center;margin:14px 0;flex-wrap:wrap}
+.toolbar{position:sticky;top:60px;background:rgba(255,255,255,.92);backdrop-filter:saturate(160%) blur(8px);z-index:40;padding-top:10px;padding-bottom:10px;border-radius:12px;border:1px solid transparent;transition:box-shadow .2s ease,border-color .2s ease}
+.toolbar.is-stuck{box-shadow:0 6px 20px rgba(0,0,0,.06);border-color:var(--border)}
 .input{flex:1;min-width:220px;padding:12px 12px;border:1px solid var(--border);border-radius:12px;background:#fafafa;transition:all .2s ease}
 .input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(10,132,255,.16);background:#fff}
 .btn{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);cursor:pointer;transition:all .2s ease}
@@ -33,6 +35,7 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 .table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .table th{position:sticky;top:0;background:linear-gradient(180deg,#f9fafc,#f1f4f9);border-bottom:1px solid var(--border);text-align:left;padding:12px 10px;color:var(--muted);font-size:13px;user-select:none}
 .table td{padding:12px 10px;border-bottom:1px solid var(--border);font-size:14px}
+.table tbody tr:nth-child(even){background:#fafbfe}
 .dense .table td{padding:8px 8px}
 .dense .input{padding:8px 10px}
 .dense .btn{padding:8px 10px}
@@ -44,6 +47,10 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 @keyframes rowUndo{0%{transform:scale(1);background:var(--panel)}60%{transform:scale(1.02);background:#fff6e6}100%{transform:scale(1);background:transparent;opacity:0}}
 .th-sort{cursor:pointer}
 .sort-indicator{color:var(--muted);margin-left:4px}
+.sort-indicator.is-active{color:var(--text)}
+.sort-indicator.is-neutral{opacity:.6}
+.fab{position:fixed;right:16px;bottom:20px;border-radius:999px;background:#111827;color:#fff;border:0;padding:12px 14px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:90;transition:transform .18s ease}
+.fab:hover{transform:translateY(-2px)}
 .skeleton-row .skeleton{display:inline-block;height:12px;width:100%;max-width:160px;background:linear-gradient(90deg,#f3f4f6, #e5e7eb, #f3f4f6);background-size:200% 100%;border-radius:6px;animation:shimmer 1.2s infinite}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .empty{padding:16px;color:var(--muted)}
