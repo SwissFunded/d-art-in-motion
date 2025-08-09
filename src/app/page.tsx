@@ -232,6 +232,7 @@ export default function Home() {
   const [movesPage, setMovesPage] = useState<number>(1);
   const [movesPageSize, setMovesPageSize] = useState<number>(10);
   const [movesCount, setMovesCount] = useState<number>(0);
+  const [movesView, setMovesView] = useState<'pending' | 'completed'>('pending');
 
   useEffect(() => {
     let isMounted = true;
@@ -246,6 +247,7 @@ export default function Home() {
         const offset = (movesPage - 1) * movesPageSize;
         const { data, error, count, status } = await source
           .select("id, artwork_id, nummer, artist_name, old_location, new_location, changed_at, completed", { count: "exact" })
+          .eq('completed', movesView === 'completed')
           .order("changed_at", { ascending: false })
           .range(offset, offset + movesPageSize - 1);
         if (error) throw Object.assign(error, { status });
@@ -264,7 +266,7 @@ export default function Home() {
     }
     loadMoves();
     return () => { isMounted = false; };
-  }, [movesPage, movesPageSize]);
+  }, [movesPage, movesPageSize, movesView]);
 
   // Realtime updates for moves
   useEffect(() => {
@@ -432,10 +434,24 @@ export default function Home() {
       </main>
       <section className="wrap" style={{ paddingTop: 0 }}>
         <h2 className="title" style={{ fontSize: 18, marginTop: 8 }}>Recent Location Changes</h2>
+        <div className="segmented" role="tablist" aria-label="Changes view">
+          <button
+            className={`seg-btn ${movesView === 'pending' ? 'is-active' : ''}`}
+            role="tab"
+            aria-selected={movesView === 'pending'}
+            onClick={() => { setMovesView('pending'); setMovesPage(1); }}
+          >Pending</button>
+          <button
+            className={`seg-btn ${movesView === 'completed' ? 'is-active' : ''}`}
+            role="tab"
+            aria-selected={movesView === 'completed'}
+            onClick={() => { setMovesView('completed'); setMovesPage(1); }}
+          >Completed</button>
+        </div>
         <div className="status">
           {movesLoading ? <span>Loading…</span> : null}
           {movesError ? <div className="error">{movesError}</div> : null}
-          <div className="count">{movesCount ? `Total: ${movesCount}` : ""}</div>
+          <div className="count">{movesCount ? `${movesCount} ${movesView}` : ""}</div>
         </div>
         {(!movesError && moves.length === 0 && !movesLoading) ? (
           <div className="columns-panel" style={{ marginTop: 8 }}>
@@ -493,9 +509,9 @@ for each row execute function public.log_artwork_location_change();`}
                     <td title={m.old_location || ''}>{m.old_location ?? ''}</td>
                     <td title={m.new_location || ''}>{m.new_location ?? ''}</td>
                     <td>{m.completed ? 'Done' : 'Pending'}</td>
-                    <td>
+                    <td style={{ textAlign: 'right' }}>
                       {!m.completed && (
-                        <button className="btn btn--small" onClick={async () => {
+                        <button className="btn btn--primary btn--small" onClick={async () => {
                           if (!supabase) return;
                           await supabase
                             .from('artwork_location_changes')
@@ -503,7 +519,7 @@ for each row execute function public.log_artwork_location_change();`}
                             .eq('id', m.id);
                           // Optimistic update will be replaced by realtime UPDATE
                           setMoves((prev) => prev.filter((x) => x.id !== m.id));
-                        }}>Acknowledge</button>
+                        }}>Done</button>
                       )}
                     </td>
                   </tr>
