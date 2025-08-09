@@ -33,6 +33,9 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 .table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .table th{position:sticky;top:0;background:linear-gradient(180deg,#f9fafc,#f1f4f9);border-bottom:1px solid var(--border);text-align:left;padding:12px 10px;color:var(--muted);font-size:13px;user-select:none}
 .table td{padding:12px 10px;border-bottom:1px solid var(--border);font-size:14px}
+.dense .table td{padding:8px 8px}
+.dense .input{padding:8px 10px}
+.dense .btn{padding:8px 10px}
 .table tr{transition:background .2s ease}
 .table tr:hover{background:var(--hover)}
 .row-done{animation:rowDone 0.42s ease forwards}

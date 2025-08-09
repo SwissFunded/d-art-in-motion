@@ -244,6 +244,14 @@ export default function Home() {
     setToasts((t) => [...t, { id, text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2400);
   };
+  const [dense, setDense] = useState<boolean>(false);
+  useEffect(() => {
+    try { setDense(localStorage.getItem('daim_dense') === '1'); } catch {}
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem('daim_dense', dense ? '1' : '0'); } catch {}
+  }, [dense]);
+  const toggleDense = () => setDense((v) => !v);
 
   useEffect(() => {
     let isMounted = true;
@@ -297,7 +305,7 @@ export default function Home() {
   }, [movesPageSize]);
 
   return (
-    <div>
+    <div className={dense ? 'dense' : ''}>
       <header className="header">
         <div className="wrap">
           <h1 className="title">D-Art in Motion</h1>
@@ -331,6 +339,7 @@ export default function Home() {
           )}
           <button className="btn" onClick={() => { setSearch(""); setFilterArtist(""); setFilterLocation(""); setPage(1); }}>Clear</button>
           <button className="btn" onClick={() => setShowColumnsPanel((s) => !s)}>Columns</button>
+          <button className="btn" onClick={toggleDense}>{dense ? 'Comfortable' : 'Compact'}</button>
         </div>
 
         {showColumnsPanel && (
@@ -395,7 +404,8 @@ export default function Home() {
                     {displayColumns.map((c) => {
                       const v = r[c as keyof typeof r];
                       const text = c === 'created_at' && v ? new Date(String(v)).toLocaleString() : String(v ?? '');
-                      return <td key={c} title={text}>{text}</td>;
+                      const isLoc = ['location','location_raw','location_normalized'].includes(c);
+                      return <td key={c} title={text}>{isLoc ? <span className="chip" title={text}>{text}</span> : text}</td>;
                     })}
                   </tr>
                 ))
@@ -445,7 +455,7 @@ export default function Home() {
       </main>
       <section className="wrap" style={{ paddingTop: 0 }}>
         <h2 className="title" style={{ fontSize: 18, marginTop: 8 }}>Recent Location Changes</h2>
-        <div className="segmented" role="tablist" aria-label="Changes view">
+        <div className="segmented" role="tablist" aria-label="Changes view" style={{ marginTop: 8 }}>
           <div className="seg-indicator" style={{ transform: movesView === 'pending' ? 'translateX(0%)' : 'translateX(100%)' }} />
           <button
             className={`seg-btn ${movesView === 'pending' ? 'is-active' : ''}`}
@@ -459,6 +469,32 @@ export default function Home() {
             aria-selected={movesView === 'completed'}
             onClick={() => { setMovesView('completed'); setMovesPage(1); }}
           >Completed</button>
+          <button className="btn btn--small" style={{ marginLeft: 10 }} onClick={async () => {
+            try {
+              const source = config.schema && config.schema !== 'public'
+                ? supabase.schema('public').from('artwork_location_changes')
+                : supabase.from('artwork_location_changes');
+              const MAX = 5000;
+              const { data, error } = await source
+                .select('changed_at, nummer, artist_name, old_location, new_location, completed')
+                .eq('completed', movesView === 'completed')
+                .order('changed_at', { ascending: false })
+                .range(0, MAX-1);
+              if (error) throw error;
+              const rows = data || [];
+              const header = ['changed_at','nummer','artist_name','old_location','new_location','completed'];
+              const escape = (s: any) => '"' + String(s ?? '').replaceAll('"','""') + '"';
+              const csv = [header.join(',')].concat(rows.map((r: any) => header.map((h) => escape(r[h])).join(','))).join('\n');
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = `changes_${movesView}.csv`; a.click();
+              URL.revokeObjectURL(url);
+              showToast('Exported CSV');
+            } catch (e: any) {
+              showToast('Export failed');
+            }
+          }}>Export CSV</button>
         </div>
         <div className="status">
           {movesLoading ? <span>Loading…</span> : null}
