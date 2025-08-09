@@ -224,6 +224,61 @@ export default function Home() {
   const [selected, setSelected] = useState<Row | null>(null);
   const closeDrawer = () => setSelected(null);
 
+  // Recent location changes section
+  type Move = { id: string; artwork_id: string; nummer?: number; artist_name?: string; old_location?: string; new_location?: string; changed_at?: string };
+  const [moves, setMoves] = useState<Move[]>([]);
+  const [movesLoading, setMovesLoading] = useState<boolean>(false);
+  const [movesError, setMovesError] = useState<string>("");
+  const [movesPage, setMovesPage] = useState<number>(1);
+  const [movesPageSize, setMovesPageSize] = useState<number>(10);
+  const [movesCount, setMovesCount] = useState<number>(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadMoves() {
+      if (!supabase) return;
+      setMovesLoading(true);
+      setMovesError("");
+      try {
+        const source = config.schema && config.schema !== "public"
+          ? supabase.schema("public").from("artwork_location_changes") // changes table is in public
+          : supabase.from("artwork_location_changes");
+        const offset = (movesPage - 1) * movesPageSize;
+        const { data, error, count, status } = await source
+          .select("id, artwork_id, nummer, artist_name, old_location, new_location, changed_at", { count: "exact" })
+          .order("changed_at", { ascending: false })
+          .range(offset, offset + movesPageSize - 1);
+        if (error) throw Object.assign(error, { status });
+        if (!isMounted) return;
+        setMoves(data || []);
+        setMovesCount(count || 0);
+      } catch (e: any) {
+        if (!isMounted) return;
+        setMoves([]);
+        setMovesCount(0);
+        const tip = "If the table 'public.artwork_location_changes' does not exist, run the SQL setup shown below.";
+        setMovesError((e?.message || String(e)) + "\n" + tip);
+      } finally {
+        if (isMounted) setMovesLoading(false);
+      }
+    }
+    loadMoves();
+    return () => { isMounted = false; };
+  }, [movesPage, movesPageSize]);
+
+  // Realtime updates for moves
+  useEffect(() => {
+    if (!supabase) return;
+    const ch = supabase
+      .channel("realtime:public:artwork_location_changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "artwork_location_changes" }, (payload: any) => {
+        setMoves((prev) => [payload.new as Move, ...prev].slice(0, movesPageSize));
+        setMovesCount((c) => c + 1);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [movesPageSize]);
+
   return (
     <div>
       <header className="header">
@@ -371,6 +426,82 @@ export default function Home() {
           </>
         )}
       </main>
+      <section className="wrap" style={{ paddingTop: 0 }}>
+        <h2 className="title" style={{ fontSize: 18, marginTop: 8 }}>Recent Location Changes</h2>
+        <div className="status">
+          {movesLoading ? <span>Loading…</span> : null}
+          {movesError ? <div className="error">{movesError}</div> : null}
+          <div className="count">{movesCount ? `Total: ${movesCount}` : ""}</div>
+        </div>
+        {(!movesError && moves.length === 0 && !movesLoading) ? (
+          <div className="columns-panel" style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 14, color: 'var(--muted)' }}>To enable tracking, run this in Supabase SQL Editor:</div>
+            <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>
+{`-- Location change audit table
+create table if not exists public.artwork_location_changes (
+  id uuid primary key default gen_random_uuid(),
+  artwork_id uuid not null,
+  nummer int,
+  artist_name text,
+  old_location text,
+  new_location text,
+  changed_at timestamptz not null default now()
+);
+
+-- Trigger function to log changes when location is updated
+create or replace function public.log_artwork_location_change() returns trigger language plpgsql as $$
+begin
+  if coalesce(new.location, '') is distinct from coalesce(old.location, '') then
+    insert into public.artwork_location_changes (artwork_id, nummer, artist_name, old_location, new_location, changed_at)
+    values (new.id, new.nummer, new.artist_name, old.location, new.location, now());
+  end if;
+  return new;
+end;$$;
+
+-- Attach trigger to your table (note the quotes for the space in the name)
+drop trigger if exists trg_log_location_change on public."Data Artworks";
+create trigger trg_log_location_change
+after update of location on public."Data Artworks"
+for each row execute function public.log_artwork_location_change();`}
+            </pre>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Changed</th>
+                  <th>Nummer</th>
+                  <th>Artist</th>
+                  <th>From</th>
+                  <th>To</th>
+                </tr>
+              </thead>
+              <tbody>
+                {moves.map((m) => (
+                  <tr key={m.id}>
+                    <td>{m.changed_at ? new Date(String(m.changed_at)).toLocaleString() : ''}</td>
+                    <td>{m.nummer ?? ''}</td>
+                    <td>{m.artist_name ?? ''}</td>
+                    <td title={m.old_location || ''}>{m.old_location ?? ''}</td>
+                    <td title={m.new_location || ''}>{m.new_location ?? ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="pagination">
+          <button className="btn" onClick={() => setMovesPage((p) => Math.max(1, p - 1))} disabled={movesPage <= 1}>Prev</button>
+          <span className="path">Page {movesPage}</span>
+          <button className="btn" onClick={() => setMovesPage((p) => p + 1)} disabled={(movesPage * movesPageSize) >= movesCount}>Next</button>
+          <select className="select" value={movesPageSize} onChange={(e) => { setMovesPage(1); setMovesPageSize(Number(e.target.value)); }}>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+      </section>
     </div>
   );
 }
