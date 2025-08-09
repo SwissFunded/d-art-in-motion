@@ -225,7 +225,7 @@ export default function Home() {
   const closeDrawer = () => setSelected(null);
 
   // Recent location changes section
-  type Move = { id: string; artwork_id: string; nummer?: number; artist_name?: string; old_location?: string; new_location?: string; changed_at?: string };
+  type Move = { id: string; artwork_id: string; nummer?: number; artist_name?: string; old_location?: string; new_location?: string; changed_at?: string; acknowledged_at?: string | null };
   const [moves, setMoves] = useState<Move[]>([]);
   const [movesLoading, setMovesLoading] = useState<boolean>(false);
   const [movesError, setMovesError] = useState<string>("");
@@ -245,7 +245,7 @@ export default function Home() {
           : supabase.from("artwork_location_changes");
         const offset = (movesPage - 1) * movesPageSize;
         const { data, error, count, status } = await source
-          .select("id, artwork_id, nummer, artist_name, old_location, new_location, changed_at", { count: "exact" })
+          .select("id, artwork_id, nummer, artist_name, old_location, new_location, changed_at, acknowledged_at", { count: "exact" })
           .order("changed_at", { ascending: false })
           .range(offset, offset + movesPageSize - 1);
         if (error) throw Object.assign(error, { status });
@@ -274,6 +274,9 @@ export default function Home() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "artwork_location_changes" }, (payload: any) => {
         setMoves((prev) => [payload.new as Move, ...prev].slice(0, movesPageSize));
         setMovesCount((c) => c + 1);
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "artwork_location_changes" }, (payload: any) => {
+        setMoves((prev) => prev.map((m) => m.id === payload.new.id ? (payload.new as Move) : m));
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -445,7 +448,8 @@ create table if not exists public.artwork_location_changes (
   artist_name text,
   old_location text,
   new_location text,
-  changed_at timestamptz not null default now()
+  changed_at timestamptz not null default now(),
+  acknowledged_at timestamptz
 );
 
 -- Trigger function to log changes when location is updated
@@ -475,6 +479,8 @@ for each row execute function public.log_artwork_location_change();`}
                   <th>Artist</th>
                   <th>From</th>
                   <th>To</th>
+                  <th>Status</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -485,6 +491,20 @@ for each row execute function public.log_artwork_location_change();`}
                     <td>{m.artist_name ?? ''}</td>
                     <td title={m.old_location || ''}>{m.old_location ?? ''}</td>
                     <td title={m.new_location || ''}>{m.new_location ?? ''}</td>
+                    <td>{m.acknowledged_at ? 'Done' : 'Pending'}</td>
+                    <td>
+                      {!m.acknowledged_at && (
+                        <button className="btn btn--small" onClick={async () => {
+                          if (!supabase) return;
+                          await supabase
+                            .from('artwork_location_changes')
+                            .update({ acknowledged_at: new Date().toISOString() })
+                            .eq('id', m.id);
+                          // Optimistic update will be replaced by realtime UPDATE
+                          setMoves((prev) => prev.map((x) => x.id === m.id ? { ...x, acknowledged_at: new Date().toISOString() } : x));
+                        }}>Acknowledge</button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

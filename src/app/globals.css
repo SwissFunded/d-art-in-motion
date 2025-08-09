@@ -12,6 +12,7 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Robot
 .input{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px}
 .btn{padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel);cursor:pointer}
 .btn:hover{background:var(--hover)}
+.btn--small{padding:6px 8px;font-size:12px;border-radius:6px}
 .columns-panel{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--panel);margin-bottom:8px}
 .columns-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .col-item{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px}
