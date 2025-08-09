@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D-Art in Motion</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8E%A8%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <!-- Supabase JS v2 via CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="./config.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>D-Art in Motion</h1>
+      <div id="subtitle" class="subtitle"></div>
+    </header>
+
+    <main class="app-main">
+      <section class="settings">
+        <details id="settingsDetails">
+          <summary>Settings</summary>
+          <div class="settings-grid">
+            <label>
+              Supabase URL
+              <input id="cfgUrl" class="input" placeholder="https://YOUR-PROJECT.supabase.co" />
+            </label>
+            <label>
+              Anon Key
+              <input id="cfgKey" class="input" type="password" placeholder="Your anon key" />
+            </label>
+            <label>
+              Schema
+              <input id="cfgSchema" class="input" placeholder="public" />
+            </label>
+            <label>
+              Table
+              <input id="cfgTable" class="input" placeholder="artworks_flat" />
+            </label>
+          </div>
+          <div class="settings-actions">
+            <button id="saveConfigBtn" class="btn" type="button">Save</button>
+            <button id="testConfigBtn" class="btn" type="button">Test</button>
+            <button id="useDefaultsBtn" class="btn" type="button" title="Use values from config.js">Use App Defaults</button>
+          </div>
+        </details>
+      </section>
+      <section class="controls">
+        <input
+          id="searchInput"
+          class="input"
+          type="search"
+          placeholder="Search by nummer, artist, title, location, or exhibitions..."
+          aria-label="Search"
+        />
+        <button id="resetBtn" class="btn" type="button">Reset</button>
+      </section>
+
+      <section class="status">
+        <div id="loading" class="loading hidden">Loading…</div>
+        <div id="error" class="error hidden"></div>
+        <div id="pathInfo" class="muted"></div>
+        <div id="count" class="count"></div>
+      </section>
+
+      <section class="table-wrap">
+        <table class="data-table" id="artworksTable" aria-label="Artworks table">
+          <thead>
+            <tr id="tableHeadRow"></tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- rows injected by app.js -->
+          </tbody>
+        </table>
+        <div id="emptyState" class="empty hidden">No records found.</div>
+      </section>
+
+      <section class="pagination">
+        <button id="prevBtn" class="btn" type="button" disabled>Prev</button>
+        <span id="pageInfo" class="page-info">Page 1</span>
+        <button id="nextBtn" class="btn" type="button" disabled>Next</button>
+        <select id="pageSize" class="select" aria-label="Rows per page">
+          <option value="10">10</option>
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+  </html>
+
+
