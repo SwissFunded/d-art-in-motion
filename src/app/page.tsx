@@ -234,7 +234,9 @@ export default function Home() {
   const [movesCount, setMovesCount] = useState<number>(0);
   const [movesView, setMovesView] = useState<'pending' | 'completed'>('pending');
   const [confirming, setConfirming] = useState<Move | null>(null);
-  const [animatingDoneId, setAnimatingDoneId] = useState<string | null>(null);
+  const [confirmMode, setConfirmMode] = useState<'done' | 'undo'>('done');
+  const [animatingId, setAnimatingId] = useState<string | null>(null);
+  const [animatingMode, setAnimatingMode] = useState<'done' | 'undo' | null>(null);
   const [confetti, setConfetti] = useState<boolean>(false);
 
   useEffect(() => {
@@ -478,7 +480,7 @@ export default function Home() {
               </thead>
               <tbody>
                 {moves.map((m) => (
-                  <tr key={m.id} className={animatingDoneId === m.id ? 'row row-done' : ''}>
+                  <tr key={m.id} className={animatingId === m.id ? (animatingMode === 'done' ? 'row row-done' : 'row row-undo') : ''}>
                     <td>{m.changed_at ? new Date(String(m.changed_at)).toLocaleString() : ''}</td>
                     <td>{m.nummer ?? ''}</td>
                     <td>{m.artist_name ?? ''}</td>
@@ -486,8 +488,10 @@ export default function Home() {
                     <td title={m.new_location || ''}>{m.new_location ?? ''}</td>
                     <td>{m.completed ? 'Done' : 'Pending'}</td>
                     <td style={{ textAlign: 'right' }}>
-                      {!m.completed && (
-                        <button className="btn btn--primary btn--small" onClick={(e) => { e.stopPropagation(); setConfirming(m); }}>Done</button>
+                      {!m.completed ? (
+                        <button className="btn btn--primary btn--small" onClick={(e) => { e.stopPropagation(); setConfirming(m); setConfirmMode('done'); }}>Done</button>
+                      ) : (
+                        <button className="btn btn--small" onClick={(e) => { e.stopPropagation(); setConfirming(m); setConfirmMode('undo'); }}>Undo</button>
                       )}
                     </td>
                   </tr>
@@ -510,7 +514,7 @@ export default function Home() {
       {confirming && (
         <div className="confirm-backdrop" onClick={() => setConfirming(null)}>
           <div className="confirm-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-            <div className="confirm-title" id="confirm-title">Mark change as Done?</div>
+            <div className="confirm-title" id="confirm-title">{confirmMode === 'done' ? 'Mark change as Done?' : 'Undo completed change?'}</div>
             <div className="confirm-body">
               <div className="confirm-row"><span>Nummer</span><strong>{confirming.nummer ?? ''}</strong></div>
               <div className="confirm-row"><span>Artist</span><strong>{confirming.artist_name ?? ''}</strong></div>
@@ -520,16 +524,16 @@ export default function Home() {
             <div className="confirm-actions">
               <button className="btn btn--small" onClick={() => setConfirming(null)}>Cancel</button>
               <button className="btn btn--primary btn--small" onClick={async () => {
-                const id = confirming.id; setConfirming(null); setAnimatingDoneId(id);
-                setConfetti(true);
+                const id = confirming.id; setConfirming(null); setAnimatingId(id); setAnimatingMode(confirmMode);
+                if (confirmMode === 'done') setConfetti(true);
                 setTimeout(async () => {
                   if (!supabase) return;
-                  await supabase.from('artwork_location_changes').update({ completed: true }).eq('id', id);
+                  await supabase.from('artwork_location_changes').update({ completed: confirmMode === 'done' }).eq('id', id);
                   setMoves((prev) => prev.filter((x) => x.id !== id));
-                  setAnimatingDoneId(null);
-                  setTimeout(() => setConfetti(false), 900);
+                  setAnimatingId(null); setAnimatingMode(null);
+                  if (confirmMode === 'done') setTimeout(() => setConfetti(false), 900);
                 }, 420);
-              }}>Mark Done</button>
+              }}>{confirmMode === 'done' ? 'Mark Done' : 'Undo'}</button>
             </div>
           </div>
         </div>

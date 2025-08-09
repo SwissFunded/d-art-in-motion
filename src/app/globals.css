@@ -37,6 +37,8 @@ body{margin:0;font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF 
 .table tr:hover{background:var(--hover)}
 .row-done{animation:rowDone 0.42s ease forwards}
 @keyframes rowDone{0%{transform:scale(1);background:var(--panel)}60%{transform:scale(0.98);background:#e8f3ff}100%{transform:scale(1);background:transparent;opacity:0}}
+.row-undo{animation:rowUndo 0.42s ease forwards}
+@keyframes rowUndo{0%{transform:scale(1);background:var(--panel)}60%{transform:scale(1.02);background:#fff6e6}100%{transform:scale(1);background:transparent;opacity:0}}
 .th-sort{cursor:pointer}
 .sort-indicator{color:var(--muted);margin-left:4px}
 .skeleton-row .skeleton{display:inline-block;height:12px;width:100%;max-width:160px;background:linear-gradient(90deg,#f3f4f6, #e5e7eb, #f3f4f6);background-size:200% 100%;border-radius:6px;animation:shimmer 1.2s infinite}
